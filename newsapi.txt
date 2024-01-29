@@ -1,0 +1,26 @@
+e71b5f2a215b4cbfa52e5b30d1fb5d32
+
+
+
+headlines
+
+https://newsapi.org/v2/top-headlines?country=us&apiKey=e71b5f2a215b4cbfa52e5b30d1fb5d32
+
+
+
+
+the-times-of-india
+bbc-news,business-insider,google-news-in,espn-cric-info,bbc-sport
+
+
+
+
+
+
+
+
+
+Future<NewsChannelsHeadlinesModel> fetchNewChannelHeadlinesApi(String channelName) async{
+    final response = await _rep.fetchNewChannelHeadlinesApi(channelName);
+    return response ;
+  }
