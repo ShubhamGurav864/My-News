@@ -4,7 +4,6 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:my_news_application/models/news_headlines_model.dart';
-import 'package:my_news_application/view/categories_screen.dart';
 import 'package:my_news_application/view/news_detail_screen.dart';
 import 'package:my_news_application/view_model/news_view_model.dart';
 
@@ -28,21 +27,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final height = MediaQuery.sizeOf(context).height * 1;
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CategoriesScreen(),
-              ),
-            );
-          },
-          icon: Image.asset(
-            'images/category_icon.png',
-            height: 26,
-            width: 26,
-          ),
-        ),
         title: Center(
           child: Padding(
             padding: const EdgeInsets.only(right: 45),
@@ -74,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemCount: snapshot.data!.articles!.length,
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (context, index) {
+                      print("Building horizontal list item $index");
                       DateTime dateTime = DateTime.parse(snapshot
                           .data!.articles![index].publishedAt
                           .toString());
@@ -112,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Padding(
                                 padding: EdgeInsets.symmetric(
                                     horizontal: height * .02),
-                                child: Container(
+                                child: SizedBox(
                                   width: width * .9,
                                   height: height * 0.6,
                                   child: ClipRRect(
@@ -152,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.center,
                                       children: [
-                                        Container(
+                                        SizedBox(
                                           width: width * 0.7,
                                           child: Text(
                                             snapshot
@@ -166,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                         ),
                                         const Spacer(),
-                                        Container(
+                                        SizedBox(
                                           width: width * 0.7,
                                           child: Row(
                                             mainAxisAlignment:

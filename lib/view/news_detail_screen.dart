@@ -33,7 +33,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       ),
       body: Stack(
         children: [
-          Container(
+          SizedBox(
             height: height * .45,
             child: ClipRRect(
               borderRadius: const BorderRadius.only(
@@ -52,7 +52,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           Container(
             height: height * .6,
             margin: EdgeInsets.only(top: height * .4),
-            padding: EdgeInsets.only(top: 20, right: 20, left: 20),
+            padding: const EdgeInsets.only(top: 20, right: 20, left: 20),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
