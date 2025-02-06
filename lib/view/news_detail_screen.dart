@@ -1,16 +1,17 @@
-import "package:cached_network_image/cached_network_image.dart";
-import "package:flutter/material.dart";
-import "package:google_fonts/google_fonts.dart";
-import "package:intl/intl.dart";
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import '../models/bookmarked.dart'; // Should define BookmarkedArticle and globalBookmarks.
 
 class NewsDetailScreen extends StatefulWidget {
-  final String image, title, date, author, description, content, source;
+  final String image, title, date, description, content, source;
   const NewsDetailScreen({
     super.key,
     required this.image,
     required this.title,
     required this.date,
-    required this.author,
     required this.description,
     required this.content,
     required this.source,
@@ -21,91 +22,176 @@ class NewsDetailScreen extends StatefulWidget {
 }
 
 class _NewsDetailScreenState extends State<NewsDetailScreen> {
-  final format = DateFormat('MMMM dd, yyyy');
+  final DateFormat format = DateFormat('MMMM dd, yyyy');
+  bool isBookmarked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Check if the article is already bookmarked (using title as identifier).
+    isBookmarked = globalBookmarks.any((b) => b.title == widget.title);
+  }
+
+  void toggleBookmark() {
+    final newBookmark = BookmarkedArticle(
+      title: widget.title,
+      source: widget.source,
+      image: widget.image,
+      date: widget.date,
+      description: widget.description,
+      content: widget.content,
+    );
+
+    setState(() {
+      if (isBookmarked) {
+        // Remove bookmark.
+        globalBookmarks.removeWhere((b) => b.title == widget.title);
+        isBookmarked = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Bookmark removed")),
+        );
+      } else {
+        // Add bookmark.
+        globalBookmarks.add(newBookmark);
+        isBookmarked = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Article bookmarked")),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.sizeOf(context).height * 1;
     DateTime datetime = DateTime.parse(widget.date);
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: Stack(
-        children: [
-          SizedBox(
-            height: height * .45,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(25),
-                topRight: Radius.circular(25),
+    return SafeArea(
+      child: Scaffold(
+        // Bottom navigation bar for share and bookmark.
+        bottomNavigationBar: Container(
+          color: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          height: 54,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.share, color: Colors.white, size: 30),
+                onPressed: () {
+                  Share.share("${widget.title}\n\nBy, Shubham Gurav.");
+                },
               ),
-              child: CachedNetworkImage(
-                imageUrl: widget.image,
-                fit: BoxFit.cover,
-                placeholder: (context, ulr) => const Center(
-                  child: CircularProgressIndicator(),
+              SizedBox(
+                width: 8,
+              ),
+              IconButton(
+                icon: Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: Colors.white,
+                  size: 30,
                 ),
+                onPressed: toggleBookmark,
               ),
-            ),
+            ],
           ),
-          Container(
-            height: height * .6,
-            margin: EdgeInsets.only(top: height * .4),
-            padding: const EdgeInsets.only(top: 20, right: 20, left: 20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(25),
-                topRight: Radius.circular(25),
+        ),
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 300,
+              pinned: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              backgroundColor: Colors.transparent,
+              // Removed share and bookmark from app bar actions.
+              flexibleSpace: FlexibleSpaceBar(
+                title: Text(
+                  widget.source,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                background: CachedNetworkImage(
+                  imageUrl: widget.image,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) =>
+                      const Center(child: CircularProgressIndicator()),
+                  errorWidget: (context, url, error) => const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                  ),
+                ),
               ),
             ),
-            child: ListView(
-              children: [
-                Text(
-                  widget.title,
-                  style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w700),
+            SliverToBoxAdapter(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(25),
+                    topRight: Radius.circular(25),
+                  ),
                 ),
-                SizedBox(
-                  height: height * .03,
-                ),
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        widget.source,
-                        style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            color: Colors.black,
-                            fontWeight: FontWeight.w700),
+                    Text(
+                      widget.title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      format.format(datetime),
-                      style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w400),
+                    const SizedBox(height: 10),
+                    const Divider(),
+                    Row(
+                      children: [
+                        Text(
+                          widget.source,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          format.format(datetime),
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 20),
+                    Text(
+                      widget.description,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      widget.content,
+                      style: GoogleFonts.poppins(
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
-                SizedBox(
-                  height: height * .04,
-                ),
-                Text(
-                  widget.description,
-                  style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w600),
-                ),
-              ],
+              ),
             ),
-          )
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -56,7 +56,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final height = MediaQuery.sizeOf(context).height;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -69,35 +68,38 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
       ),
       body: RefreshIndicator(
         onRefresh: _refreshData,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
             children: [
-              // Category Chips
+              // Category Chips with refined styling.
               SizedBox(
                 height: 60,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: categoriesList.length,
                   itemBuilder: (context, index) {
+                    bool isSelected = categoryName == categoriesList[index];
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
-                        label: Text(
-                          categoriesList[index],
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: categoryName == categoriesList[index]
-                                ? Colors.white
-                                : Colors.black,
+                        label: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Text(
+                            categoriesList[index],
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: isSelected ? Colors.white : Colors.black,
+                            ),
                           ),
                         ),
-                        selected: categoryName == categoriesList[index],
+                        selected: isSelected,
                         selectedColor: Colors.black,
-                        backgroundColor: Colors.grey[200],
+                        backgroundColor: Colors.grey[300],
                         onSelected: (selected) {
                           setState(() {
                             categoryName = categoriesList[index];
@@ -109,7 +111,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // News List
+              // News List: display each article in a refined Card.
               Expanded(
                 child: FutureBuilder<CategoriesNewsModel>(
                   future: newsViewModel.fetchCategoriesNewsApi(categoryName),
@@ -145,12 +147,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     } else {
                       return ListView.builder(
                         controller: _scrollController,
+                        physics: const BouncingScrollPhysics(),
                         itemCount: snapshot.data!.articles!.length,
                         itemBuilder: (context, index) {
                           final article = snapshot.data!.articles![index];
-                          final dateTime =
+                          final DateTime dateTime =
                               DateTime.parse(article.publishedAt.toString());
-
                           return Card(
                             margin: const EdgeInsets.only(bottom: 16),
                             elevation: 4,
@@ -158,6 +160,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -166,7 +169,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                       image: article.urlToImage.toString(),
                                       title: article.title.toString(),
                                       date: article.publishedAt.toString(),
-                                      author: article.author.toString(),
                                       description:
                                           article.description.toString(),
                                       content: article.content.toString(),
@@ -178,7 +180,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // News Image
+                                  // Article Image.
                                   ClipRRect(
                                     borderRadius: const BorderRadius.only(
                                       topLeft: Radius.circular(12),
@@ -187,7 +189,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                     child: CachedNetworkImage(
                                       imageUrl: article.urlToImage.toString(),
                                       fit: BoxFit.cover,
-                                      height: height * 0.15,
+                                      height: height * 0.18,
                                       width: width * 0.3,
                                       placeholder: (context, url) =>
                                           const Center(
@@ -200,7 +202,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                           const Icon(Icons.error_outline),
                                     ),
                                   ),
-                                  // News Details
+                                  // Article Details.
                                   Expanded(
                                     child: Padding(
                                       padding: const EdgeInsets.all(12),
@@ -221,10 +223,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                           const SizedBox(height: 8),
                                           Text(
                                             article.description.toString(),
-                                            maxLines: 2,
+                                            maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.poppins(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               color: Colors.black54,
                                             ),
                                           ),
@@ -247,7 +249,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                               Text(
                                                 format.format(dateTime),
                                                 style: GoogleFonts.poppins(
-                                                  fontSize: 12,
+                                                  fontSize: 8,
                                                   color: Colors.black54,
                                                 ),
                                               ),
