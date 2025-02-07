@@ -1,8 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_news_application/view/bottomnavbar.dart';
 import 'package:my_news_application/view/signup_screen.dart';
 
-/// Login Screen
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -14,12 +15,52 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  void _login() {
+  bool isLoading = false;
+
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement login functionality.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Logging in...")),
-      );
+      setState(() {
+        isLoading = true;
+      });
+      try {
+        // Attempt to sign in with Firebase Auth.
+        FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+        );
+        // Login successful. You might navigate to your HomeScreen here.
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Logged in successfully!")),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BottomNavBar(),
+          ),
+        );
+      } on FirebaseAuthException catch (e) {
+        String errorMessage;
+        if (e.code == 'user-not-found') {
+          errorMessage = "No user found for that email.";
+        } else if (e.code == 'network-request-failed') {
+          errorMessage =
+              "No network connection. Please check your internet and try again.";
+        } else if (e.code == 'wrong-password') {
+          errorMessage = "Wrong password provided.";
+        } else {
+          errorMessage = e.message ?? "Login failed.";
+        }
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(errorMessage)));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("An error occurred, please try again.")),
+        );
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -35,11 +76,10 @@ class _LoginScreenState extends State<LoginScreen> {
               key: _formKey,
               child: Column(
                 children: [
-                  // App Header: Icon + App Name "My News"
+                  // App Header: Fancy Icon with gradient and app name "My News".
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Fancy Icon with gradient background.
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -58,14 +98,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         child: const Icon(
-                          Icons
-                              .newspaper, // Use a more appropriate news icon if available.
+                          Icons.newspaper, // News-related icon.
                           size: 48,
                           color: Colors.white,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Fancy Text with gradient shader.
                       Text(
                         "My News",
                         style: GoogleFonts.poppins(
@@ -82,7 +120,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 34),
                   Text(
                     "Login",
@@ -107,7 +144,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return "Please enter your email";
                       }
-                      // Optionally add more email validation here.
                       return null;
                     },
                   ),
@@ -141,15 +177,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: _login,
-                      child: Text(
-                        "Login",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                      onPressed: isLoading ? null : _login,
+                      child: isLoading
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : Text(
+                              "Login",
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 16),

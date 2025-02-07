@@ -1,11 +1,50 @@
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_news_application/view/login_screen.dart';
 import 'bookmark_screen.dart'; // Import the bookmark screen
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  User? user;
+  StreamSubscription<User?>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    user = FirebaseAuth.instance.currentUser; // Initial fetch
+
+    // Listen for auth state changes
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
+      (User? updatedUser) {
+        if (mounted) {
+          // Only update UI if widget is still mounted
+          setState(() {
+            user = updatedUser;
+          });
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel(); // Cancel the listener to prevent memory leaks
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final String displayName = user?.displayName ?? "John Doe";
+    final String email = user?.email ?? "johndoe@example.com";
+
     return SafeArea(
       child: Scaffold(
         backgroundColor: Colors.grey[100],
@@ -15,7 +54,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 54),
               // Profile details.
               Text(
-                "John Doe",
+                displayName,
                 style: GoogleFonts.poppins(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -23,7 +62,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "johndoe@example.com",
+                email,
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   color: Colors.grey,
@@ -31,7 +70,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               const Divider(thickness: 1),
-              // Profile options (Only Bookmarks and Log Out).
+              // Profile options (Bookmarks and Log Out).
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -46,11 +85,10 @@ class ProfileScreen extends StatelessWidget {
                       trailing: const Icon(Icons.arrow_forward_ios,
                           size: 16, color: Colors.black54),
                       onTap: () {
-                        // Navigate to BookmarkScreen.
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const BookmarkScreen()),
+                              builder: (context) => BookmarkScreen()),
                         );
                       },
                     ),
@@ -63,8 +101,14 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios,
                           size: 16, color: Colors.black54),
-                      onTap: () {
-                        // Handle logout.
+                      onTap: () async {
+                        await FirebaseAuth.instance.signOut();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LoginScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],

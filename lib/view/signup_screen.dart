@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_news_application/view/bottomnavbar.dart';
 
-/// Sign Up Screen
+/// Sign Up Screen with Firebase Authentication
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
   @override
@@ -14,11 +16,57 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  void _signUp() {
+  bool isLoading = false;
+
+  Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Signing up...")),
-      );
+      setState(() {
+        isLoading = true;
+      });
+      try {
+        // Create a new user with email and password.
+        UserCredential userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+        );
+        // Update display name with the username.
+        await userCredential.user!.updateDisplayName(
+          usernameController.text.trim(),
+        );
+        // Optionally send a verification email.
+        await userCredential.user!.sendEmailVerification();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Sign up successful! Please verify your email.")),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BottomNavBar(),
+          ),
+        );
+      } on FirebaseAuthException catch (e) {
+        String errorMessage;
+        if (e.code == 'weak-password') {
+          errorMessage = "The password provided is too weak.";
+        } else if (e.code == 'email-already-in-use') {
+          errorMessage = "An account already exists for that email.";
+        } else {
+          errorMessage = e.message ?? "An unknown error occurred.";
+        }
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(errorMessage)));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("An error occurred, please try again.")),
+        );
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -34,7 +82,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               key: _formKey,
               child: Column(
                 children: [
-                  // App Header: Icon + App Name "My News"
+                  // App Header: Fancy Icon + App Name "My News"
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -57,8 +105,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ],
                         ),
                         child: const Icon(
-                          Icons
-                              .newspaper, // Use a more appropriate news icon if available.
+                          Icons.newspaper, // News-related icon.
                           size: 48,
                           color: Colors.white,
                         ),
@@ -81,7 +128,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 24),
                   Text(
                     "Sign Up",
@@ -157,15 +203,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: _signUp,
-                      child: Text(
-                        "Sign Up",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                      onPressed: isLoading ? null : _signUp,
+                      child: isLoading
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : Text(
+                              "Sign Up",
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 16),

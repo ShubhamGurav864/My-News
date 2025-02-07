@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
+          leading: SizedBox(),
           backgroundColor: Colors.transparent,
           centerTitle: true,
           elevation: 0,

@@ -58,6 +58,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final height = MediaQuery.sizeOf(context).height;
     return Scaffold(
       appBar: AppBar(
+        leading: SizedBox(),
         title: Text(
           'Categories',
           style: GoogleFonts.poppins(
