@@ -13,55 +13,127 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController(); 
+
 
   bool isLoading = false;
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  String _getFirebaseAuthErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'No account found with this email. Please check your email or sign up.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again or reset your password.';
+      case 'invalid-email':
+        return 'The email address is badly formatted.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'too-many-requests':
+        return 'Too many failed attempts. Please try again later.';
+      case 'operation-not-allowed':
+        return 'Email & Password authentication is not enabled.';
+      case 'email-already-in-use':
+        return 'An account already exists with this email.';
+      case 'weak-password':
+        return 'Please choose a stronger password.';
+      case 'network-request-failed':
+        return 'No internet connection. Please check your connection and try again.';
+      default:
+        return 'An error occurred. Please try again.';
+    }
+  }
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         isLoading = true;
       });
+
       try {
-        // Attempt to sign in with Firebase Auth.
-        FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: emailController.text.trim(),
-          password: passwordController.text.trim(),
+        final email = emailController.text.trim();
+        final password = passwordController.text.trim();
+
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
         );
-        // Login successful. You might navigate to your HomeScreen here.
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Logged in successfully!")),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BottomNavBar(),
-          ),
-        );
-      } on FirebaseAuthException catch (e) {
-        String errorMessage;
-        if (e.code == 'user-not-found') {
-          errorMessage = "No user found for that email.";
-        } else if (e.code == 'network-request-failed') {
-          errorMessage =
-              "No network connection. Please check your internet and try again.";
-        } else if (e.code == 'wrong-password') {
-          errorMessage = "Wrong password provided.";
-        } else {
-          errorMessage = e.message ?? "Login failed.";
+
+        if (mounted) {
+          _showSuccessSnackBar('Welcome back!');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const BottomNavBar(),
+            ),
+          );
         }
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(errorMessage)));
+      } on FirebaseAuthException catch (e) {
+        _showErrorSnackBar(_getFirebaseAuthErrorMessage(e.code));
+        debugPrint('Firebase Auth Error: ${e.code}'); // For debugging
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("An error occurred, please try again.")),
-        );
+        _showErrorSnackBar('An unexpected error occurred. Please try again.');
+        debugPrint('Unexpected Error: $e'); // For debugging
       } finally {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     }
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your email';
+    }
+    // Basic email validation
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
   }
 
   @override
@@ -98,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         child: const Icon(
-                          Icons.newspaper, // News-related icon.
+                          Icons.newspaper,
                           size: 48,
                           color: Colors.white,
                         ),
@@ -139,13 +211,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       prefixIcon: const Icon(Icons.email),
+                      errorMaxLines: 2,
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Please enter your email";
-                      }
-                      return null;
-                    },
+                    validator: _validateEmail,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -157,14 +227,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       prefixIcon: const Icon(Icons.lock),
+                      errorMaxLines: 2,
                     ),
                     obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Please enter your password";
-                      }
-                      return null;
-                    },
+                    validator: _validatePassword,
                   ),
                   const SizedBox(height: 32),
                   SizedBox(

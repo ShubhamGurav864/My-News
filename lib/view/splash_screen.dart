@@ -15,45 +15,94 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  bool _hasNavigated = false;
+
   @override
   void initState() {
     super.initState();
-    // Start the timer and then check connectivity.
-    Timer(const Duration(seconds: 3), _checkConnectivity);
+    // Initialize connectivity monitoring
+    _initConnectivity();
+    // Start the splash screen timer
+    Timer(const Duration(seconds: 3), () {
+      if (!_hasNavigated) {
+        _checkConnectivity();
+      }
+    });
+  }
+
+  Future<void> _initConnectivity() async {
+    // Listen to connectivity changes
+    _connectivitySubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> results) {
+      // Check if any of the connectivity results indicate a connection
+      bool hasConnection =
+          results.any((result) => result != ConnectivityResult.none);
+
+      if (!hasConnection) {
+        _showNoConnectionDialog();
+      } else {
+        // If we're showing a no connection dialog, dismiss it
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        if (!_hasNavigated) {
+          _navigateUser();
+        }
+      }
+    });
+
+    // Check current connectivity status
+    await _checkConnectivity();
   }
 
   Future<void> _checkConnectivity() async {
-    var connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      _showNoConnectionDialog();
-    } else {
-      _navigateUser();
+    try {
+      final results = await Connectivity().checkConnectivity();
+      bool hasConnection = results != ConnectivityResult.none;
+
+      if (!hasConnection) {
+        _showNoConnectionDialog();
+      } else if (!_hasNavigated) {
+        _navigateUser();
+      }
+    } catch (e) {
+      debugPrint('Error checking connectivity: $e');
     }
   }
 
   void _showNoConnectionDialog() {
+    if (!mounted) return;
+
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissal by tapping outside.
-      builder: (context) => AlertDialog(
-        title: const Text("No Internet Connection"),
-        content:
-            const Text("Please check your network settings and try again."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _checkConnectivity(); // Retry checking connectivity.
-            },
-            child: const Text("Retry"),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false, // Prevent back button dismissal
+        child: AlertDialog(
+          title: const Text("No Internet Connection"),
+          content:
+              const Text("Please check your network settings and try again."),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _checkConnectivity();
+              },
+              child: const Text("Retry"),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _navigateUser() {
-    // Check if the user is logged in.
+    if (!mounted || _hasNavigated) return;
+
+    setState(() {
+      _hasNavigated = true;
+    });
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       Navigator.pushReplacement(
@@ -66,6 +115,12 @@ class _SplashScreenState extends State<SplashScreen> {
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
   }
 
   @override
