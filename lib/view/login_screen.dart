@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:my_news_application/view/bottomnavbar.dart';
 import 'package:my_news_application/view/signup_screen.dart';
 
+/// Login Screen with Email/Password and Google Sign-In.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -13,9 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController(); 
-
-
+  final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
 
   void _showErrorSnackBar(String message) {
@@ -79,31 +79,26 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         isLoading = true;
       });
-
       try {
         final email = emailController.text.trim();
         final password = passwordController.text.trim();
-
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
-
         if (mounted) {
           _showSuccessSnackBar('Welcome back!');
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (context) => const BottomNavBar(),
-            ),
+            MaterialPageRoute(builder: (context) => const BottomNavBar()),
           );
         }
       } on FirebaseAuthException catch (e) {
         _showErrorSnackBar(_getFirebaseAuthErrorMessage(e.code));
-        debugPrint('Firebase Auth Error: ${e.code}'); // For debugging
+        debugPrint('Firebase Auth Error: ${e.code}');
       } catch (e) {
         _showErrorSnackBar('An unexpected error occurred. Please try again.');
-        debugPrint('Unexpected Error: $e'); // For debugging
+        debugPrint('Unexpected Error: $e');
       } finally {
         if (mounted) {
           setState(() {
@@ -114,11 +109,52 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        // User cancelled the sign-in flow.
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      if (mounted) {
+        _showSuccessSnackBar("Signed in with Google successfully!");
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const BottomNavBar()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      _showErrorSnackBar(_getFirebaseAuthErrorMessage(e.code));
+      debugPrint('Firebase Auth Google Error: ${e.code}');
+    } catch (e) {
+      _showErrorSnackBar("Google sign in failed. Please try again.");
+      debugPrint('Google Sign In Error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your email';
     }
-    // Basic email validation
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email address';
@@ -256,6 +292,36 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: Colors.white,
                               ),
                             ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Google Sign-In Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: isLoading ? null : _signInWithGoogle,
+                      icon: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: Image.asset(
+                          'images/google.png',
+                          height: 28,
+                        ),
+                      ),
+                      label: Text(
+                        "Sign in with Google",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
